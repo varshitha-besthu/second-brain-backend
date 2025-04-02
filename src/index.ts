@@ -5,6 +5,8 @@ import { ContentModel, LinkModel, UserModel } from "./db";
 import { JWT_PASSWORD } from "./config";
 import { userMiddleware } from "./middleware";
 import cors from "cors";
+import mongoose from "mongoose";
+import { ObjectId } from "mongoose";
 
 const app = express();
 app.use(express.json());
@@ -55,14 +57,13 @@ app.post("/api/v1/signin", async (req, res) => {
 })
 
 app.post("/api/v1/content", userMiddleware, async (req, res) => {
-    const link = req.body.link;
-    const type = req.body.type;
+    const {title, link, type, tags} = req.body;
     await ContentModel.create({
-        link,
-        type,
-        title: req.body.title,
         userId: req.userId,
-        tags: []
+        title: title,
+        link : link,
+        type : type,
+        tags: tags
     })
 
     res.json({
@@ -83,17 +84,29 @@ app.get("/api/v1/content", userMiddleware, async (req, res) => {
 })
 
 app.delete("/api/v1/content", userMiddleware, async (req, res) => {
-    const contentId = req.body.contentId;
+    try {
+        // const contentId = req.body.contentId;
+        const { contentId } = req.body; // ✅ Destructure directly
+        const objectId = new mongoose.Types.ObjectId(contentId); // Convert to ObjectId
+        const deletedContent = await ContentModel.findByIdAndDelete({
+            _id: objectId, 
+        });
 
-    await ContentModel.deleteMany({
-        contentId,
-        userId: req.userId
-    })
+        if (!deletedContent) {
+            res.status(404).json({ message: "Content not found or you don't have permission" });
+            return;
+        }
 
-    res.json({
-        message: "Deleted"
-    })
-})
+        res.status(200).json({ 
+            message: "Content deleted successfully",
+            contentId: contentId,
+            userId: req.userId
+        });
+    } catch (error) {
+        console.error("Error deleting content:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
 
 app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
     const share = req.body.share;
