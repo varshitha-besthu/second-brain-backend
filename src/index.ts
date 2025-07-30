@@ -83,6 +83,25 @@ app.get("/api/v1/content", userMiddleware, async (req, res) => {
     })
 })
 
+app.get("/api/v1/filter/tagName", userMiddleware, async(req , res) => {
+    try{
+        const userId = req.userId;
+        const tagName = req.query.tagName;
+        const type = req.query.type;
+        const content = await ContentModel.find({
+            userId:userId,
+            "type":{$regex: type, $options: "i"},
+            "tags.tagName":{$regex: tagName, $options: "i"}
+        })
+
+        res.status(200).json({content})
+
+    }catch(error){
+         console.error("Error deleting content:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+})
+
 app.delete("/api/v1/content", userMiddleware, async (req, res) => {
     try {
         // const contentId = req.body.contentId;
